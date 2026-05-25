@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Driver Load Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0a0a0a;
+  --s1:#111;--s2:#181818;--s3:#202020;
+  --b1:rgba(255,255,255,0.07);--b2:rgba(255,255,255,0.12);
+  --ink:#f0ede8;--ink2:#888;--ink3:#444;--ink4:#252525;
+  --acc:#d4f02a;--acc-d:rgba(212,240,42,0.1);--acc-d2:rgba(212,240,42,0.05);
+  --ok:#3dd68c;--ok-b:rgba(61,214,140,0.1);
+  --wn:#f0a030;--wn-b:rgba(240,160,48,0.1);
+  --er:#f05555;--er-b:rgba(240,85,85,0.1);
+  --in:#60aaff;--in-b:rgba(96,170,255,0.1);
+  --r:5px;--font:'Syne',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+html{font-size:15px;}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:100vh;padding:2rem 1rem 4rem;}
+
+.page{max-width:680px;margin:0 auto;}
+
+/* Header */
+.hdr{margin-bottom:2.5rem;}
+.hdr-top{display:flex;align-items:center;gap:12px;margin-bottom:4px;}
+.reset-btn{margin-left:auto;display:flex;align-items:center;gap:6px;background:none;border:1px solid var(--b2);border-radius:var(--r);color:var(--ink3);font-family:var(--font);font-size:12px;font-weight:600;padding:7px 12px;cursor:pointer;transition:all 0.15s;letter-spacing:0.02em;}
+.reset-btn:hover{border-color:var(--er);color:var(--er);background:var(--er-b);}
+.reset-btn svg{width:13px;height:13px;flex-shrink:0;}
+.hdr-icon{width:34px;height:34px;border:1px solid rgba(212,240,42,0.3);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.hdr-icon svg{width:15px;height:15px;stroke:var(--acc);stroke-width:2;fill:none;}
+h1{font-size:18px;font-weight:700;letter-spacing:-0.2px;}
+.hdr-sub{font-size:13px;color:var(--ink3);margin-left:46px;}
+
+/* Section label */
+.slbl{font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:8px;}
+
+/* Config row */
+.cfg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:2rem;}
+@media(max-width:480px){.cfg{grid-template-columns:1fr 1fr;}}
+
+.cfg-item{}
+select,input[type=number],input[type=text]{
+  width:100%;background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);
+  color:var(--ink);font-family:var(--font);font-size:13px;padding:9px 10px;outline:none;
+  transition:border-color 0.15s,box-shadow 0.15s;
+}
+select{
+  appearance:none;-webkit-appearance:none;padding-right:28px;cursor:pointer;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center;
+}
+select option{background:#1a1a1a;}
+input:focus,select:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-d2);}
+input::placeholder{color:var(--ink4);}
+input[type=number]{font-family:var(--mono);}
+
+/* Wiring toggle */
+.wire-toggle{display:flex;gap:6px;margin-bottom:0.75rem;}
+.wire-btn{
+  flex:1;padding:9px 8px;background:var(--s2);border:1px solid var(--b1);
+  border-radius:var(--r);color:var(--ink2);font-family:var(--font);font-size:12px;font-weight:600;
+  cursor:pointer;transition:all 0.15s;text-align:center;letter-spacing:0.02em;
+}
+.wire-btn.active{background:var(--acc-d);border-color:var(--acc);color:var(--acc);}
+.wire-btn small{display:block;font-size:10px;font-weight:400;color:var(--ink3);margin-top:2px;}
+.wire-btn.active small{color:rgba(212,240,42,0.6);}
+
+/* Wiring diagram accordion */
+.wiring-explain{margin-bottom:1.75rem;}
+.wdiag-toggle{
+  display:flex;align-items:center;gap:6px;cursor:pointer;
+  font-size:11px;color:var(--ink3);padding:5px 0;width:fit-content;
+  background:none;border:none;font-family:var(--font);transition:color 0.15s;
+}
+.wdiag-toggle:hover{color:var(--ink2);}
+.wdiag-toggle .wdarr{width:12px;height:12px;stroke:currentColor;stroke-width:2;fill:none;transition:transform 0.2s;flex-shrink:0;}
+.wdiag-toggle.open .wdarr{transform:rotate(180deg);}
+.wdiag-body{display:none;margin-top:8px;}
+.wdiag-toggle.open+.wdiag-body{display:block;}
+.wdiag-panels{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:500px){.wdiag-panels{grid-template-columns:1fr;}}
+.wdiag-panel{background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);padding:14px;}
+.wdiag-title{font-size:10px;font-weight:700;color:var(--ink2);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;}
+.wdiag-svg{width:100%;display:block;}
+.wdiag-desc{font-size:11px;color:var(--ink3);line-height:1.6;margin-top:10px;}
+
+/* Fixture rows */
+.fix-area{margin-bottom:1rem;}
+.fix-cols{display:grid;grid-template-columns:1.6fr 80px 72px 72px 64px 36px;gap:6px;padding:0 0 6px;border-bottom:1px solid var(--b2);margin-bottom:0;}
+.col-hd{font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.08em;text-align:right;}
+.col-hd:first-child{text-align:left;}
+
+.fix-row{display:grid;grid-template-columns:1.6fr 80px 72px 72px 64px 36px;gap:6px;align-items:center;padding:5px 0;border-bottom:1px solid var(--b1);animation:ri 0.14s ease;}
+@keyframes ri{from{opacity:0;transform:translateY(-3px);}to{opacity:1;transform:translateY(0);}}
+.fix-row input[type=text]{font-size:13px;}
+.fix-row input[type=number]{font-size:13px;text-align:right;}
+
+.del{width:34px;height:34px;background:none;border:1px solid var(--b1);border-radius:var(--r);color:var(--ink3);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.del:hover{background:var(--er-b);border-color:var(--er);color:var(--er);}
+.del svg{width:11px;height:11px;stroke:currentColor;stroke-width:2.5;fill:none;}
+
+.add-btn{width:100%;background:none;border:1px dashed var(--b2);border-radius:var(--r);color:var(--ink3);font-family:var(--font);font-size:13px;padding:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.15s;}
+.add-btn:hover{border-color:var(--acc);color:var(--acc);background:var(--acc-d2);}
+.add-btn svg{width:13px;height:13px;stroke:currentColor;stroke-width:2.5;fill:none;}
+
+/* Optional fields toggle */
+.opt-toggle{margin:1rem 0;display:flex;align-items:center;gap:8px;cursor:pointer;width:fit-content;}
+.opt-toggle input[type=checkbox]{display:none;}
+.chk-box{width:16px;height:16px;background:var(--s2);border:1px solid var(--b2);border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;}
+.chk-box svg{width:10px;height:10px;stroke:var(--acc);stroke-width:2.5;fill:none;opacity:0;transition:opacity 0.15s;}
+.opt-toggle.checked .chk-box{background:var(--acc-d);border-color:var(--acc);}
+.opt-toggle.checked .chk-box svg{opacity:1;}
+.opt-toggle span{font-size:12px;color:var(--ink2);}
+
+/* Extra fields panel */
+.extra-panel{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:14px;margin-bottom:1.5rem;display:none;}
+.extra-panel.open{display:block;}
+.extra-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media(max-width:480px){.extra-grid{grid-template-columns:1fr 1fr;}}
+.extra-field{}
+.ef-lbl{font-size:11px;color:var(--ink2);margin-bottom:5px;}
+
+/* Results */
+.result-box{background:var(--s1);border:1px solid var(--b1);border-radius:8px;overflow:hidden;margin-top:1.5rem;}
+
+.result-main{padding:20px 20px 16px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;border-bottom:1px solid var(--b1);}
+.result-lbl{font-size:10px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:6px;}
+.result-num{font-family:var(--mono);font-size:44px;font-weight:500;color:var(--ink);line-height:1;letter-spacing:-1px;}
+.result-num .u{font-size:18px;color:var(--ink2);}
+.result-note{font-size:11px;font-family:var(--mono);color:var(--ink3);margin-top:5px;}
+
+.bdg{display:inline-block;font-size:10px;font-weight:700;padding:4px 10px;border-radius:3px;letter-spacing:0.05em;text-transform:uppercase;margin-top:4px;}
+.bdg-ok{background:var(--ok-b);color:var(--ok);}
+.bdg-wn{background:var(--wn-b);color:var(--wn);}
+.bdg-er{background:var(--er-b);color:var(--er);}
+.bdg-in{background:var(--in-b);color:var(--in);}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);}
+.stat{padding:12px 14px;border-right:1px solid var(--b1);}
+.stat:last-child{border-right:none;}
+.stat-l{font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:3px;}
+.stat-v{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--ink);}
+.stat-v .u{font-size:11px;color:var(--ink2);}
+@media(max-width:500px){.stats-row{grid-template-columns:repeat(2,1fr);}.stat:nth-child(2){border-right:none;}.stat:nth-child(3){border-top:1px solid var(--b1);}.stat:nth-child(4){border-top:1px solid var(--b1);}}
+
+/* Workings + optional analysis — accordion style */
+.accordion{border-top:1px solid var(--b1);}
+.acc-item{border-bottom:1px solid var(--b1);}
+.acc-item:last-child{border-bottom:none;}
+.acc-hdr{
+  width:100%;background:none;border:none;padding:12px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  color:var(--ink2);font-family:var(--font);font-size:12px;font-weight:600;
+  cursor:pointer;text-align:left;transition:color 0.15s;letter-spacing:0.02em;
+}
+.acc-hdr:hover{color:var(--ink);}
+.acc-hdr .arr{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none;transition:transform 0.2s;flex-shrink:0;}
+.acc-item.open .acc-hdr{color:var(--ink);}
+.acc-item.open .arr{transform:rotate(180deg);}
+.acc-body{display:none;padding:0 16px 14px;}
+.acc-item.open .acc-body{display:block;}
+
+/* Workings steps */
+.steps{}
+.step{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--b1);}
+.step:last-child{border-bottom:none;}
+.sn{width:18px;height:18px;flex-shrink:0;background:var(--s2);border:1px solid var(--b2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--ink3);margin-top:1px;}
+.sf{font-family:var(--mono);font-size:11px;color:var(--acc);margin-bottom:1px;}
+.sc{font-family:var(--mono);font-size:11px;color:var(--ink2);}
+.sr{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--ink);margin-top:2px;}
+.sd{font-size:11px;color:var(--ink3);margin-top:1px;}
+
+/* Analysis sections */
+.analysis-blk{margin-bottom:10px;padding:11px 13px;background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);}
+.an-name{font-size:11px;font-weight:700;color:var(--ink2);margin-bottom:8px;}
+.an-g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;}
+.an-c .al{font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:0.08em;font-weight:700;margin-bottom:2px;}
+.an-c .av{font-family:var(--mono);font-size:15px;font-weight:500;color:var(--ink);}
+.an-c .au{font-size:11px;color:var(--ink2);}
+.an-note{font-size:11px;font-family:var(--mono);color:var(--ink3);padding:6px 9px;background:var(--s1);border-left:2px solid var(--acc);border-radius:2px;line-height:1.5;}
+.an-note.wn{border-left-color:var(--wn);color:var(--wn);}
+.an-note.er{border-left-color:var(--er);color:var(--er);}
+
+/* V-drop bar */
+.vbar-bg{height:5px;background:var(--s1);border-radius:3px;overflow:hidden;margin:6px 0 2px;border:1px solid var(--b1);}
+.vbar-fill{height:100%;border-radius:3px;}
+.vbar-lbls{display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--ink3);}
+
+/* Empty */
+.empty{padding:2rem;text-align:center;font-size:13px;color:var(--ink3);}
+
+/* Wiring diagram mini */
+.wire-diagram{display:flex;align-items:center;justify-content:center;gap:6px;padding:10px 0 4px;flex-wrap:wrap;}
+.wd-node{width:28px;height:16px;background:var(--s2);border:1px solid var(--b2);border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;color:var(--ink2);}
+.wd-line{width:14px;height:1px;background:var(--b2);}
+.wd-arrow{font-size:9px;color:var(--acc);}
+.wd-label{font-size:10px;color:var(--ink3);font-family:var(--mono);text-align:center;width:100%;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div class="hdr-top">
+      <div class="hdr-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+      </div>
+      <h1>Driver Load Calculator</h1>
+      <button class="reset-btn" onclick="resetAll()" title="Reset everything">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+        Reset
+      </button>
+    </div>
+    <div class="hdr-sub">Size your LED driver from fixture wattage and voltage</div>
+  </div>
+
+  <!-- Config -->
+  <div class="slbl">Settings</div>
+  <div class="cfg">
+    <div class="cfg-item">
+      <div class="slbl" style="margin-bottom:5px;">Supply voltage</div>
+      <select id="voltage" onchange="recalc()">
+        <option value="12">12V DC</option>
+        <option value="24" selected>24V DC</option>
+        <option value="48">48V DC</option>
+        <option value="240">240V AC</option>
+      </select>
+    </div>
+    <div class="cfg-item">
+      <div class="slbl" style="margin-bottom:5px;">Safety margin</div>
+      <select id="margin" onchange="recalc()">
+        <option value="0">None</option>
+        <option value="10">10%</option>
+        <option value="20" selected>20% (rec.)</option>
+        <option value="25">25%</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Wiring type -->
+  <div class="slbl">Wiring configuration</div>
+  <div class="wire-toggle">
+    <button class="wire-btn active" id="btn-parallel" onclick="setWiring('parallel')">
+      Parallel
+      <small>LEDs share voltage, currents add up</small>
+    </button>
+    <button class="wire-btn" id="btn-series" onclick="setWiring('series')">
+      Series
+      <small>Voltages add up, same current through all</small>
+    </button>
+  </div>
+
+  <!-- Wiring diagram explainer -->
+  <div class="wiring-explain">
+    <button class="wdiag-toggle" id="wdiagToggle" onclick="toggleWdiag()">
+      <svg class="wdarr" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      What's the difference? Show wiring diagrams
+    </button>
+    <div class="wdiag-body" id="wdiagBody">
+      <div class="wdiag-panels">
+
+        <!-- Parallel diagram -->
+        <div class="wdiag-panel">
+          <div class="wdiag-title">Parallel wiring</div>
+          <svg class="wdiag-svg" viewBox="0 0 220 160" xmlns="http://www.w3.org/2000/svg">
+            <!-- Driver box -->
+            <rect x="4" y="55" width="44" height="50" rx="3" fill="#1f1f1f" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+            <text x="26" y="76" font-family="IBM Plex Mono" font-size="7" fill="#888" text-anchor="middle">DRIVER</text>
+            <text x="26" y="88" font-family="IBM Plex Mono" font-size="8" fill="#d4f02a" text-anchor="middle" font-weight="500">24V</text>
+            <!-- + rail top -->
+            <line x1="48" y1="65" x2="68" y2="65" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <line x1="68" y1="65" x2="68" y2="20" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <line x1="68" y1="20" x2="210" y2="20" stroke="#d4f02a" stroke-width="1.5" stroke-dasharray="0"/>
+            <!-- – rail bottom -->
+            <line x1="48" y1="95" x2="68" y2="95" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <line x1="68" y1="95" x2="68" y2="140" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <line x1="68" y1="140" x2="210" y2="140" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+            <!-- LED 1 -->
+            <line x1="100" y1="20" x2="100" y2="45" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <rect x="82" y="45" width="36" height="26" rx="3" fill="#1f1f1f" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+            <text x="100" y="58" font-family="IBM Plex Mono" font-size="7" fill="#888" text-anchor="middle">LED</text>
+            <text x="100" y="67" font-family="IBM Plex Mono" font-size="7" fill="#d4f02a" text-anchor="middle">24V</text>
+            <line x1="100" y1="71" x2="100" y2="140" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <!-- LED 2 -->
+            <line x1="152" y1="20" x2="152" y2="45" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <rect x="134" y="45" width="36" height="26" rx="3" fill="#1f1f1f" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+            <text x="152" y="58" font-family="IBM Plex Mono" font-size="7" fill="#888" text-anchor="middle">LED</text>
+            <text x="152" y="67" font-family="IBM Plex Mono" font-size="7" fill="#d4f02a" text-anchor="middle">24V</text>
+            <line x1="152" y1="71" x2="152" y2="140" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <!-- LED 3 -->
+            <line x1="204" y1="20" x2="204" y2="45" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <rect x="186" y="45" width="36" height="26" rx="3" fill="#1f1f1f" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+            <text x="204" y="58" font-family="IBM Plex Mono" font-size="7" fill="#888" text-anchor="middle">LED</text>
+            <text x="204" y="67" font-family="IBM Plex Mono" font-size="7" fill="#d4f02a" text-anchor="middle">24V</text>
+            <line x1="204" y1="71" x2="204" y2="140" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <!-- + / - labels -->
+            <text x="52" y="63" font-family="IBM Plex Mono" font-size="8" fill="#d4f02a">+</text>
+            <text x="52" y="93" font-family="IBM Plex Mono" font-size="8" fill="#888">−</text>
+            <!-- current arrows on + rail -->
+            <text x="78" y="17" font-family="IBM Plex Mono" font-size="7" fill="#d4f02a">→</text>
+            <text x="118" y="17" font-family="IBM Plex Mono" font-size="7" fill="#d4f02a">→</text>
+            <text x="164" y="17" font-family="IBM Plex Mono" font-size="7" fill="#d4f02a">→</text>
+          </svg>
+          <div class="wdiag-desc">Each LED connects directly across the supply. All LEDs see the same voltage. Currents from each branch <strong style="color:var(--ink2)">add together</strong> — the driver must supply the total. One LED failing doesn't affect the others.</div>
+        </div>
+
+        <!-- Series diagram -->
+        <div class="wdiag-panel">
+          <div class="wdiag-title">Series wiring</div>
+          <svg class="wdiag-svg" viewBox="0 0 220 160" xmlns="http://www.w3.org/2000/svg">
+            <!-- Driver box -->
+            <rect x="4" y="55" width="44" height="50" rx="3" fill="#1f1f1f" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+            <text x="26" y="76" font-family="IBM Plex Mono" font-size="7" fill="#888" text-anchor="middle">DRIVER</text>
+            <text x="26" y="88" font-family="IBM Plex Mono" font-size="8" fill="#d4f02a" text-anchor="middle" font-weight="500">CC</text>
+            <!-- single current path top then back bottom -->
+            <line x1="48" y1="65" x2="68" y2="65" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <line x1="68" y1="65" x2="68" y2="30" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <line x1="68" y1="30" x2="84" y2="30" stroke="#d4f02a" stroke-width="1.5"/>
+            <!-- LED 1 -->
+            <rect x="84" y="18" width="36" height="26" rx="3" fill="#1f1f1f" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+            <text x="102" y="30" font-family="IBM Plex Mono" font-size="7" fill="#888" text-anchor="middle">LED</text>
+            <text x="102" y="39" font-family="IBM Plex Mono" font-size="7" fill="#d4f02a" text-anchor="middle">Vf1</text>
+            <!-- wire LED1 to LED2 -->
+            <line x1="120" y1="30" x2="136" y2="30" stroke="#d4f02a" stroke-width="1.5"/>
+            <!-- LED 2 -->
+            <rect x="136" y="18" width="36" height="26" rx="3" fill="#1f1f1f" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+            <text x="154" y="30" font-family="IBM Plex Mono" font-size="7" fill="#888" text-anchor="middle">LED</text>
+            <text x="154" y="39" font-family="IBM Plex Mono" font-size="7" fill="#d4f02a" text-anchor="middle">Vf2</text>
+            <!-- wire LED2 to LED3 -->
+            <line x1="172" y1="30" x2="188" y2="30" stroke="#d4f02a" stroke-width="1.5"/>
+            <!-- LED 3 -->
+            <rect x="188" y="18" width="36" height="26" rx="3" fill="#1f1f1f" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+            <text x="206" y="30" font-family="IBM Plex Mono" font-size="7" fill="#888" text-anchor="middle">LED</text>
+            <text x="206" y="39" font-family="IBM Plex Mono" font-size="7" fill="#d4f02a" text-anchor="middle">Vf3</text>
+            <!-- return path bottom -->
+            <line x1="206" y1="44" x2="206" y2="110" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <line x1="48" y1="95" x2="68" y2="95" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <line x1="68" y1="95" x2="68" y2="110" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <line x1="68" y1="110" x2="206" y2="110" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+            <!-- current arrow -->
+            <text x="90" y="14" font-family="IBM Plex Mono" font-size="7" fill="#d4f02a">→</text>
+            <text x="140" y="14" font-family="IBM Plex Mono" font-size="7" fill="#d4f02a">→</text>
+            <text x="190" y="14" font-family="IBM Plex Mono" font-size="7" fill="#d4f02a">→</text>
+            <!-- Vtotal label -->
+            <text x="130" y="125" font-family="IBM Plex Mono" font-size="7" fill="#888" text-anchor="middle">V_total = Vf1+Vf2+Vf3</text>
+            <!-- same current label -->
+            <text x="130" y="136" font-family="IBM Plex Mono" font-size="7" fill="#d4f02a" text-anchor="middle">same I through all →</text>
+            <!-- + / - labels -->
+            <text x="52" y="63" font-family="IBM Plex Mono" font-size="8" fill="#d4f02a">+</text>
+            <text x="52" y="93" font-family="IBM Plex Mono" font-size="8" fill="#888">−</text>
+          </svg>
+          <div class="wdiag-desc">LEDs are wired end-to-end in a single loop. The <strong style="color:var(--ink2)">same current</strong> flows through every LED. Voltages add up — the driver must handle the total string voltage. If one LED fails, the whole string goes out.</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  <div class="slbl">Fixtures</div>
+  <div class="fix-area">
+    <div class="fix-cols">
+      <div class="col-hd">Name</div>
+      <div class="col-hd">Watts (W)</div>
+      <div class="col-hd" style="text-align:center;grid-column:span 2;font-size:9px;">Fwd voltage (V)<br><span style="color:var(--ink3);font-weight:400;text-transform:none;letter-spacing:0;">min &nbsp;/&nbsp; max</span></div>
+      <div class="col-hd">Qty</div>
+      <div></div>
+    </div>
+    <div id="fixRows"></div>
+  </div>
+  <button class="add-btn" onclick="addFix()">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Add fixture
+  </button>
+
+  <!-- Optional fields toggle -->
+  <div class="opt-toggle" id="optToggle" onclick="toggleOpt()">
+    <div class="chk-box">
+      <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+    </div>
+    <span>Include voltage drop analysis (run length &amp; cable CSA)</span>
+  </div>
+
+  <!-- Extra fields panel -->
+  <div class="extra-panel" id="extraPanel">
+    <div class="slbl" style="margin-bottom:10px;">Per-circuit details <span style="font-weight:400;color:var(--ink3);text-transform:none;letter-spacing:0;">(leave blank to skip)</span></div>
+    <div class="extra-grid" id="extraFields"></div>
+  </div>
+
+  <!-- Results -->
+  <div id="resultsArea"></div>
+
+</div>
+
+<script>
+const RHO=0.0175, VD_WARN=3, VD_ERR=5;
+let wiring='parallel', showOpt=false;
+let fixtures=[
+  {id:1,name:'Downlight',watts:10,fwdMin:'',fwdMax:'',qty:6},
+  {id:2,name:'Strip light',watts:14,fwdMin:'',fwdMax:'',qty:3}
+];
+let nid=3;
+// Optional per-fixture extra data stored separately
+let extras={};  // id -> {fwd, len, csa}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function n(v){return parseFloat(v)||0;}
+function getExtra(id){return extras[id]||(extras[id]={fwd:'',len:'',csa:'1.5'});}
+
+function toggleWdiag(){
+  const btn=document.getElementById('wdiagToggle');
+  btn.classList.toggle('open');
+}
+
+function setWiring(w){
+  wiring=w;
+  document.getElementById('btn-parallel').classList.toggle('active',w==='parallel');
+  document.getElementById('btn-series').classList.toggle('active',w==='series');
+  recalc();
+}
+
+function addFix(){
+  fixtures.push({id:nid++,name:'',watts:'',fwdMin:'',fwdMax:'',qty:1});
+  render();
+  const els=document.querySelectorAll('#fixRows input[data-t="name"]');
+  if(els.length) els[els.length-1].focus();
+}
+
+function removeFix(id){
+  fixtures=fixtures.filter(f=>f.id!==id);
+  delete extras[id];
+  render();
+}
+
+function updFix(id,field,val){
+  const f=fixtures.find(x=>x.id===id);
+  if(!f)return;
+  // Store raw string so partial typing (e.g. "4" on the way to "40") isn't clobbered
+  f[field]=val;
+  // Only update results — do NOT call renderRows() here
+  calcResults();
+}
+
+function updExtra(id,field,val){
+  getExtra(id)[field]=val;
+  calcResults();
+}
+
+function toggleOpt(){
+  showOpt=!showOpt;
+  document.getElementById('optToggle').classList.toggle('checked',showOpt);
+  document.getElementById('extraPanel').classList.toggle('open',showOpt);
+  renderExtraFields();
+  recalc();
+}
+
+function renderExtraFields(){
+  const container=document.getElementById('extraFields');
+  if(!showOpt){container.innerHTML='';return;}
+  container.innerHTML=fixtures.map(f=>{
+    const ex=getExtra(f.id);
+    return `<div style="grid-column:1/-1;font-size:11px;font-weight:700;color:var(--ink2);padding:6px 0 4px;border-top:1px solid var(--b1);margin-top:4px;">${esc(f.name)||'Fixture '+f.id}</div>
+    <div class="extra-field">
+      <div class="ef-lbl">Run length (m)</div>
+      <input type="number" min="0" step="0.5" placeholder="e.g. 5" value="${ex.len||''}" oninput="updExtra(${f.id},'len',this.value)" style="font-family:var(--mono);font-size:13px;">
+    </div>
+    <div class="extra-field">
+      <div class="ef-lbl">Cable CSA (mm²)</div>
+      <input type="number" min="0.5" step="0.5" placeholder="1.5" value="${ex.csa||''}" oninput="updExtra(${f.id},'csa',this.value)" style="font-family:var(--mono);font-size:13px;">
+    </div>`;
+  }).join('');
+}
+
+function renderRows(){
+  document.getElementById('fixRows').innerHTML=fixtures.map(f=>`
+    <div class="fix-row">
+      <input type="text" placeholder="e.g. Downlight" value="${esc(f.name)}" data-t="name" oninput="updFix(${f.id},'name',this.value)">
+      <input type="number" min="0" step="0.1" placeholder="W" value="${f.watts||''}" oninput="updFix(${f.id},'watts',this.value)">
+      <input type="number" min="0" max="999" step="0.1" placeholder="min V" value="${f.fwdMin||''}" title="Forward voltage minimum (V)" oninput="updFix(${f.id},'fwdMin',this.value)" style="border-right:none;border-radius:var(--r) 0 0 var(--r);">
+      <input type="number" min="0" max="999" step="0.1" placeholder="max V" value="${f.fwdMax||''}" title="Forward voltage maximum (V)" oninput="updFix(${f.id},'fwdMax',this.value)" style="border-left:1px solid var(--b1);border-radius:0 var(--r) var(--r) 0;">
+      <input type="number" min="1" step="1" placeholder="1" value="${f.qty||1}" oninput="updFix(${f.id},'qty',this.value)">
+      <button class="del" onclick="removeFix(${f.id})" aria-label="Remove">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>`).join('');
+}
+
+function accItem(title, badgeHtml, bodyHtml, openByDefault){
+  const id='acc'+Math.random().toString(36).slice(2,7);
+  return `<div class="acc-item${openByDefault?' open':''}" id="${id}">
+    <button class="acc-hdr" onclick="toggleAcc('${id}')">
+      <span>${title} ${badgeHtml}</span>
+      <svg class="arr" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </button>
+    <div class="acc-body">${bodyHtml}</div>
+  </div>`;
+}
+
+function toggleAcc(id){document.getElementById(id).classList.toggle('open');}
+
+function recalc(){
+  renderRows();
+  if(showOpt) renderExtraFields();
+  calcResults();
+}
+
+function calcResults(){
+  const v=n(document.getElementById('voltage').value)||24;
+  const marginPct=n(document.getElementById('margin').value)/100;
+  const valid=fixtures.filter(f=>n(f.watts)>0&&n(f.qty)>0);
+
+  if(!valid.length){
+    document.getElementById('resultsArea').innerHTML='<div class="empty">Add at least one fixture to see results</div>';
+    return;
+  }
+
+  const totalW=valid.reduce((s,f)=>s+n(f.watts)*n(f.qty),0);
+  let totalMA, reqMA, totalA, modeNote, wiringStepHtml='';
+  // Range vars — populated when any fixture has fwdMin/fwdMax
+  let reqMAmin=null, reqMAmax=null, hasRange=false;
+
+  if(wiring==='parallel'){
+    // Parallel: I_total = P_total / V  — same regardless of Vf range
+    totalA=totalW/v;
+    totalMA=totalA*1000;
+    reqMA=Math.ceil(totalMA*(1+marginPct));
+    modeNote=`Each fixture shares the ${v}V supply. Currents add.`;
+    wiringStepHtml=`<div class="step"><div class="sn">2</div><div>
+      <div class="sf">I = P_total ÷ V  (parallel)</div>
+      <div class="sc">${totalW.toFixed(2)}W ÷ ${v}V</div>
+      <div class="sr">= ${totalMA.toFixed(2)} mA</div>
+      <div class="sd">All fixtures share the supply voltage — currents sum together</div>
+    </div></div>`;
+  } else {
+    // Series: V_total = sum of fixture voltages (approximated as V per fixture if no Vf given)
+    // Current = P_total / V_total  — but in series the same current flows through all
+    // Simplified: driver current = smallest fixture current = P_fixture / V_fixture
+    // If no Vf given, use supply voltage divided by fixture count as placeholder
+    const withFvMin=valid.filter(f=>n(f.fwdMin)>0||n(f.fwdMax)>0);
+    if(withFvMin.length>0){
+      // Series with Vf range: compute min and max driver current
+      // At Vf_max → lowest LED current (I = P/Vf_max) → minimum driver needed
+      // At Vf_min → highest LED current (I = P/Vf_min) → maximum driver needed
+      // Use midpoint Vf for the nominal value if both provided
+      const ledData=valid.map(f=>{
+        const fmin=n(f.fwdMin), fmax=n(f.fwdMax);
+        const fNom = fmin>0&&fmax>0 ? (fmin+fmax)/2 : (fmax||fmin||v);
+        const fLow = fmin>0 ? fmin : fNom;
+        const fHigh = fmax>0 ? fmax : fNom;
+        return {
+          name: f.name, qty: f.qty,
+          fLow, fHigh, fNom,
+          iHigh: f.watts/fLow*1000,   // high current (at Vf min)
+          iNom:  f.watts/fNom*1000,
+          iLow:  f.watts/fHigh*1000,  // low current (at Vf max)
+        };
+      });
+      const maxIHigh = Math.max(...ledData.map(l=>l.iHigh));
+      const maxINom  = Math.max(...ledData.map(l=>l.iNom));
+      const maxILow  = Math.max(...ledData.map(l=>l.iLow));
+      totalMA  = maxINom;
+      totalA   = totalMA/1000;
+      reqMA    = Math.ceil(totalMA*(1+marginPct));
+      reqMAmin = Math.ceil(maxILow*(1+marginPct));
+      reqMAmax = Math.ceil(maxIHigh*(1+marginPct));
+      hasRange = reqMAmin !== reqMAmax;
+      const vTotalNom=valid.reduce((s,f)=>{
+        const fmin=n(f.fwdMin),fmax=n(f.fwdMax);
+        const fNom=fmin>0&&fmax>0?(fmin+fmax)/2:(fmax||fmin||v);
+        return s+fNom*f.qty;
+      },0);
+      modeNote=`Series: ${hasRange?reqMAmin+'–'+reqMAmax+'mA driver range':reqMA+'mA'} · V_string ≈ ${vTotalNom.toFixed(1)}V`;
+      wiringStepHtml=`<div class="step"><div class="sn">2</div><div>
+        <div class="sf">I_driver = P_per_LED ÷ Vf  (series)</div>
+        <div class="sc">${ledData.map(l=>`${l.name||'LED'}: ${l.fLow===l.fHigh?l.fNom.toFixed(1)+'V':l.fLow.toFixed(1)+'–'+l.fHigh.toFixed(1)+'V'} → ${l.fLow===l.fHigh?l.iNom.toFixed(0):l.iLow.toFixed(0)+'–'+l.iHigh.toFixed(0)}mA`).join('  ·  ')}</div>
+        <div class="sr">= ${hasRange?reqMAmin+'–'+reqMAmax+' mA range':reqMA+' mA'} (incl. ${(marginPct*100).toFixed(0)}% margin)</div>
+        <div class="sd">At Vf min (${ledData.map(l=>l.fLow).join('/')+'V'}) current is highest → ${reqMAmax}mA. At Vf max (${ledData.map(l=>l.fHigh).join('/')+'V'}) → ${reqMAmin}mA. Choose a driver within this range.</div>
+      </div></div>`;
+    } else {
+      // No Vf data — fall back to parallel method with a note
+      totalA=totalW/v;
+      totalMA=totalA*1000;
+      reqMA=Math.ceil(totalMA*(1+marginPct));
+      modeNote=`Series mode: enter forward voltage (Fwd V) next to each fixture for accurate series calculation`;
+      wiringStepHtml=`<div class="step"><div class="sn">2</div><div>
+        <div class="sf">I = P ÷ V  (series — no Vf entered, using supply V)</div>
+        <div class="sc">${totalW.toFixed(2)}W ÷ ${v}V</div>
+        <div class="sr">= ${totalMA.toFixed(2)} mA</div>
+        <div class="sd">Enter forward voltage in the Fwd V column per fixture for accurate series calculation</div>
+      </div></div>`;
+    }
+  }
+
+  // Badge / status
+  let badge;
+  if(marginPct===0) badge=`<span class="bdg bdg-wn">No margin</span>`;
+  else badge=`<span class="bdg bdg-ok">+${(marginPct*100).toFixed(0)}% margin</span>`;
+
+  // ── Workings
+  const workingsHtml=`<div class="steps">
+    <div class="step"><div class="sn">1</div><div>
+      <div class="sf">P_total = Σ (W × Qty)</div>
+      <div class="sc">${valid.map(f=>`(${f.watts}×${f.qty})`).join(' + ')}</div>
+      <div class="sr">= ${totalW.toFixed(2)} W</div>
+      <div class="sd">Total power across all fixtures</div>
+    </div></div>
+    ${wiringStepHtml}
+    <div class="step"><div class="sn">3</div><div>
+      <div class="sf">I_req = I × (1 + margin)</div>
+      <div class="sc">${totalMA.toFixed(2)} mA × ${(1+marginPct).toFixed(2)}</div>
+      <div class="sr">= ${reqMA} mA</div>
+      <div class="sd">Safety margin keeps the driver below its rated maximum</div>
+    </div></div>
+  </div>`;
+
+  // ── Forward voltage analysis (shown whenever Fwd V is entered)
+  let fvHtml='';
+  let fvFixes=valid.filter(f=>n(f.fwdMin)>0||n(f.fwdMax)>0);
+  if(fvFixes.length>0){
+    const fvBlocks=fvFixes.map(f=>{
+      const fmin=n(f.fwdMin), fmax=n(f.fwdMax);
+      const fNom=fmin>0&&fmax>0?(fmin+fmax)/2:(fmax||fmin);
+      const hasVfRange=fmin>0&&fmax>0&&fmin!==fmax;
+      const scMin=fmax>0?Math.floor(v/fmax):Math.floor(v/fNom);
+      const scMax=fmin>0?Math.floor(v/fmin):Math.floor(v/fNom);
+      const lcMin=(f.watts/( fmax||fNom)*1000).toFixed(0);
+      const lcMax=(f.watts/( fmin||fNom)*1000).toFixed(0);
+      const ok=scMin>=1;
+      return `<div class="analysis-blk">
+        <div class="an-name">${esc(f.name)||'Unnamed'}</div>
+        <div class="an-g" style="grid-template-columns:1fr 1fr 1fr 1fr;">
+          <div class="an-c"><div class="al">Vf min</div><div class="av">${fmin>0?fmin:'—'}<span class="au">${fmin>0?' V':''}</span></div></div>
+          <div class="an-c"><div class="al">Vf max</div><div class="av">${fmax>0?fmax:'—'}<span class="au">${fmax>0?' V':''}</span></div></div>
+          <div class="an-c"><div class="al">LED current</div><div class="av">${hasVfRange?lcMin+'–'+lcMax:lcMin}<span class="au"> mA</span></div></div>
+          <div class="an-c"><div class="al">Max series LEDs</div><div class="av">${ok?(hasVfRange?scMin+'–'+scMax:scMin):'—'}</div></div>
+        </div>
+        <div class="an-note${ok?'':' er'}">${hasVfRange?`Vf ${fmin}–${fmax}V → ${scMin}–${scMax} LEDs in series · current ${lcMin}–${lcMax}mA`:`floor(${v} ÷ ${fNom}) = ${scMin} LED(s)`} &nbsp;·&nbsp; ${ok?`${scMin} fit min`:`⚠ Vf exceeds supply`}</div>
+      </div>`;
+    }).join('');
+    fvHtml=fvBlocks;
+  }
+
+  // ── Optional: voltage drop
+  let vdHtml='', worstVd=0;
+  if(showOpt){
+    const vdFixes=valid.filter(f=>n(getExtra(f.id).len)>0&&n(getExtra(f.id).csa)>0);
+    if(vdFixes.length){
+      const vdBlocks=vdFixes.map(f=>{
+        const ex=getExtra(f.id);
+        const I=(f.watts*f.qty)/v;
+        const Vd=(2*n(ex.len)*I*RHO)/n(ex.csa);
+        const pct=(Vd/v)*100;
+        if(pct>worstVd)worstVd=pct;
+        const barW=Math.min(pct/10*100,100).toFixed(1);
+        const col=pct<=VD_WARN?'var(--ok)':pct<=VD_ERR?'var(--wn)':'var(--er)';
+        const nc=pct<=VD_WARN?'':pct<=VD_ERR?'wn':'er';
+        return `<div class="analysis-blk">
+          <div class="an-name">${esc(f.name)||'Unnamed'} · ${n(ex.len)}m · ${n(ex.csa)}mm²</div>
+          <div class="an-g">
+            <div class="an-c"><div class="al">V drop</div><div class="av">${Vd.toFixed(3)}<span class="au"> V</span></div></div>
+            <div class="an-c"><div class="al">% of supply</div><div class="av">${pct.toFixed(2)}<span class="au"> %</span></div></div>
+            <div class="an-c"><div class="al">V at end</div><div class="av">${(v-Vd).toFixed(2)}<span class="au"> V</span></div></div>
+          </div>
+          <div class="vbar-bg"><div class="vbar-fill" style="width:${barW}%;background:${col};"></div></div>
+          <div class="vbar-lbls"><span>0%</span><span style="color:var(--wn)">3%</span><span style="color:var(--er)">5%</span><span>10%</span></div>
+          <div class="an-note ${nc}" style="margin-top:6px;">(2×${n(ex.len)}×${I.toFixed(3)}×0.0175)÷${n(ex.csa)} = ${Vd.toFixed(3)}V &nbsp;·&nbsp; ${pct<=VD_WARN?'✓ OK':pct<=VD_ERR?'⚠ Marginal — increase CSA or shorten run':'✗ Exceeds 5% — action required'}</div>
+        </div>`;
+      }).join('');
+      vdHtml=vdBlocks;
+    } else {
+      vdHtml=`<p style="font-size:12px;color:var(--ink3);">Enter run length and cable CSA in the optional fields above to see voltage drop analysis.</p>`;
+    }
+  }
+
+  // ── Wiring diagram
+  const diagramHtml=`<div class="wire-diagram">
+    ${wiring==='parallel'
+      ? `<div class="wd-arrow">+</div>
+         ${valid.slice(0,Math.min(valid.length,4)).map(f=>`<div class="wd-node">${f.watts}W</div>`).join('<div class="wd-line"></div>')}
+         ${valid.length>4?`<div style="font-size:11px;color:var(--ink3)">+${valid.length-4} more</div>`:''}
+         <div class="wd-arrow">−</div>
+         <div class="wd-label">Parallel: all share ${v}V · currents add · driver needs ${reqMA}mA</div>`
+      : `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;">
+           <div style="display:flex;align-items:center;gap:6px;">
+             <div class="wd-arrow">+</div>
+             ${valid.slice(0,Math.min(valid.length,4)).map(f=>`<div class="wd-node">${f.watts}W</div><div class="wd-line"></div>`).join('')}
+             ${valid.length>4?`<div style="font-size:11px;color:var(--ink3)">···</div><div class="wd-line"></div>`:''}
+             <div class="wd-arrow">−</div>
+           </div>
+           <div class="wd-label">Series: voltages add · same ${reqMA}mA through all</div>
+         </div>`
+    }
+  </div>`;
+
+  // Assemble accordion items
+  let accordionItems=accItem('How it\'s calculated','',workingsHtml,false);
+  if(fvHtml) accordionItems+=accItem('Forward voltage analysis',fvFixes.length?`<span class="bdg bdg-in" style="font-size:9px;">Series</span>`:'',fvHtml,false);
+  if(showOpt && vdHtml) {
+    const vdBadge=worstVd>VD_ERR?`<span class="bdg bdg-er" style="font-size:9px;">${worstVd.toFixed(1)}%</span>`:worstVd>VD_WARN?`<span class="bdg bdg-wn" style="font-size:9px;">${worstVd.toFixed(1)}%</span>`:`<span class="bdg bdg-ok" style="font-size:9px;">${worstVd.toFixed(1)}%</span>`;
+    accordionItems+=accItem('Voltage drop',worstVd>0?vdBadge:'',vdHtml,worstVd>VD_WARN);
+  }
+
+  // Build the main result display — show range if we have one
+  const rangeDisplay = hasRange
+    ? `<div class="result-lbl">Driver output range</div>
+       <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;">
+         <div>
+           <div style="font-size:10px;color:var(--ink3);margin-bottom:2px;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;">Min (at Vf max)</div>
+           <div class="result-num" style="font-size:32px;">${reqMAmin}<span class="u"> mA</span></div>
+         </div>
+         <div style="font-size:22px;color:var(--ink3);padding:0 4px;align-self:center;">—</div>
+         <div>
+           <div style="font-size:10px;color:var(--ink3);margin-bottom:2px;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;">Max (at Vf min)</div>
+           <div class="result-num" style="font-size:32px;">${reqMAmax}<span class="u"> mA</span></div>
+         </div>
+       </div>
+       <div class="result-note" style="margin-top:6px;">Nominal ${reqMA}mA · select a driver within ${reqMAmin}–${reqMAmax}mA</div>`
+    : `<div class="result-lbl">Minimum driver output</div>
+       <div class="result-num">${reqMA}<span class="u"> mA</span></div>
+       <div class="result-note">${totalMA.toFixed(1)} mA ${wiring} · ×${(1+marginPct).toFixed(2)} margin</div>`;
+
+  document.getElementById('resultsArea').innerHTML=`
+  <div class="result-box">
+    <div class="result-main">
+      <div>${rangeDisplay}</div>
+      <div style="text-align:right;">${badge}<br><span style="font-size:11px;color:var(--ink3);display:block;margin-top:6px;max-width:160px;line-height:1.4;">${modeNote}</span></div>
+    </div>
+    ${diagramHtml}
+    <div class="stats-row">
+      <div class="stat"><div class="stat-l">Total power</div><div class="stat-v">${totalW.toFixed(1)}<span class="u"> W</span></div></div>
+      <div class="stat"><div class="stat-l">Load current</div><div class="stat-v">${totalMA.toFixed(0)}<span class="u"> mA</span></div></div>
+      <div class="stat"><div class="stat-l">Amps draw</div><div class="stat-v">${totalA.toFixed(3)}<span class="u"> A</span></div></div>
+      <div class="stat"><div class="stat-l">Fixtures</div><div class="stat-v">${valid.length}<span class="u"> circuits</span></div></div>
+    </div>
+    <div class="accordion">${accordionItems}</div>
+  </div>`;
+}
+
+function resetAll(){
+  fixtures=[
+    {id:1,name:'Downlight',watts:10,fwdMin:'',fwdMax:'',qty:6},
+    {id:2,name:'Strip light',watts:14,fwdMin:'',fwdMax:'',qty:3}
+  ];
+  nid=3;
+  extras={};
+  wiring='parallel';
+  showOpt=false;
+  document.getElementById('voltage').value='24';
+  document.getElementById('margin').value='20';
+  document.getElementById('btn-parallel').classList.add('active');
+  document.getElementById('btn-series').classList.remove('active');
+  document.getElementById('optToggle').classList.remove('checked');
+  document.getElementById('extraPanel').classList.remove('open');
+  render();
+}
+
+function render(){renderRows();if(showOpt)renderExtraFields();calcResults();}
+recalc();
+</script>
+</body>
+</html>
